@@ -8,10 +8,6 @@ from pathlib import Path
 from typing import Any
 
 
-# ---------------------------------------------------------
-# PROJECT PATHS
-# ---------------------------------------------------------
-
 BASE_DIR = Path(__file__).resolve().parent
 DATA_DIR = BASE_DIR / "data"
 
@@ -30,10 +26,7 @@ class LeadDatabase:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self.initialize()
 
-    # -----------------------------------------------------
     # CONNECTION AND INITIALIZATION
-    # -----------------------------------------------------
-
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, timeout=10)
         conn.row_factory = sqlite3.Row
@@ -125,10 +118,7 @@ class LeadDatabase:
                 "WHERE tag = 'Hot' AND notification_status = 'not_required'"
             )
 
-    # -----------------------------------------------------
     # NORMALIZATION HELPERS
-    # -----------------------------------------------------
-
     @staticmethod
     def _value(record: dict[str, Any], key: str) -> str:
         value = record.get(key, "")
@@ -178,10 +168,7 @@ class LeadDatabase:
             or self._company_key(company),
         )
 
-    # -----------------------------------------------------
     # IMPORT EXISTING CSV
-    # -----------------------------------------------------
-
     def import_existing_csv(
         self,
         csv_path: str | Path = DEFAULT_CSV_PATH,
@@ -265,10 +252,7 @@ class LeadDatabase:
 
         return imported
 
-    # -----------------------------------------------------
     # DUPLICATE DETECTION
-    # -----------------------------------------------------
-
     def find_duplicate(
         self,
         lead: dict[str, Any],
@@ -310,10 +294,8 @@ class LeadDatabase:
 
             return dict(row) if row else None
 
-    # -----------------------------------------------------
-    # ERROR LOGGING
-    # -----------------------------------------------------
 
+    # ERROR LOGGING
     def save_error(
         self,
         submission_id: str | None,
@@ -342,10 +324,8 @@ class LeadDatabase:
                 ),
             )
 
-    # -----------------------------------------------------
-    # SAVE INCOMING LEADS
-    # -----------------------------------------------------
 
+    # SAVE INCOMING LEADS
     def save_incoming_lead(
         self,
         lead: dict[str, Any],
@@ -512,10 +492,8 @@ class LeadDatabase:
                 ),
             }
 
-    # -----------------------------------------------------
+    
     # SAVE LLM CLASSIFICATION AND REPLY
-    # -----------------------------------------------------
-
     def update_classification(
         self,
         lead_db_id: int,
@@ -571,10 +549,7 @@ class LeadDatabase:
                     (tag, draft_reply, tag, submission_id, lead_db_id),
                 )
 
-    # -----------------------------------------------------
     # HOT-LEAD NOTIFICATION TRACKING
-    # -----------------------------------------------------
-
     def get_pending_hot_notifications(self) -> list[dict[str, Any]]:
         """Return Hot enquiries whose email has not been marked sent."""
         with self._connect() as conn:
@@ -627,10 +602,8 @@ class LeadDatabase:
                 (status, error_message, submission_id),
             )
 
-    # -----------------------------------------------------
-    # READ DATA
-    # -----------------------------------------------------
 
+    # READ DATA
     def get_leads(self) -> list[dict[str, Any]]:
         """Return all customer records."""
 
