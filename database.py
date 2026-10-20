@@ -387,6 +387,7 @@ class LeadDatabase:
 
             duplicate = None
 
+            # 1. Prefer an exact normalized email match on the customer record.
             if email_key:
                 duplicate = conn.execute(
                     """
@@ -398,6 +399,39 @@ class LeadDatabase:
                     (email_key,),
                 ).fetchone()
 
+            # 2. Also check email addresses from earlier incoming submissions.
+            # A previous enquiry may have been linked to a customer record
+            # whose main email field is different.
+            if duplicate is None and email_key:
+                previous_enquiries = conn.execute(
+                    """
+                    SELECT e.raw_json, e.lead_db_id
+                    FROM enquiries AS e
+                    ORDER BY e.id
+                    """
+                ).fetchall()
+
+                for previous in previous_enquiries:
+                    try:
+                        previous_raw = json.loads(
+                            previous["raw_json"] or "{}"
+                        )
+                    except (TypeError, json.JSONDecodeError):
+                        continue
+
+                    previous_email = self._email_key(
+                        str(previous_raw.get("email") or "")
+                    )
+
+                    if previous_email and previous_email == email_key:
+                        duplicate = conn.execute(
+                            "SELECT * FROM leads WHERE id = ?",
+                            (previous["lead_db_id"],),
+                        ).fetchone()
+                        if duplicate is not None:
+                            break
+
+            # 3. If email did not identify a match, use normalized name + company.
             if duplicate is None and name_key and company_key:
                 duplicate = conn.execute(
                     """
@@ -537,7 +571,11 @@ class LeadDatabase:
                     UPDATE enquiries
                     SET tag = ?,
                         draft_reply = ?,
-                        status = 'processed',
+                        status = CASE
+                            WHEN status IN ('duplicate', 'needs_review')
+                            THEN status
+                            ELSE 'processed'
+                        END,
                         notification_status = CASE
                             WHEN ? = 'Hot' THEN 'pending'
                             ELSE 'not_required'
